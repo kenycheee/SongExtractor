@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "128888242323",
+    "project_id": "songextractor-1010",
+    "storage_bucket": "songextractor-1010.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128888242323:android:4cba7449aaf3b3c176cd66",
+        "android_client_info": {
+          "package_name": "com.example.songextractor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0Z2N0rc_A_HAAfUrGPI_H95a1bxzF2zg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
