@@ -16,23 +16,26 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
-  final TextEditingController _descriptionController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
   File? _selectedImage;
   Uint8List? _webImage;
-  bool _isPrivate = false;
-  bool _allowComments = true;
-  bool _loading = false;
+  bool _isUploading = false;
 
+  // 🔹 Placeholder jika gak ada gambar
+  final String _placeholderUrl =
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/640px-No_image_available.svg.png';
+
+  // 🔹 Ambil gambar (support Web dan Mobile)
   Future<void> _pickImage() async {
     try {
       if (kIsWeb) {
-        // 🖥️ Flutter Web pakai file_picker
         final result = await FilePicker.platform.pickFiles(type: FileType.image);
         if (result != null && result.files.single.bytes != null) {
           setState(() => _webImage = result.files.single.bytes);
         }
       } else {
-        // 📱 Flutter Mobile pakai image_picker
         final picker = ImagePicker();
         final picked = await picker.pickImage(source: ImageSource.gallery);
         if (picked != null) {
@@ -40,169 +43,158 @@ class _PostPageState extends State<PostPage> {
         }
       }
     } catch (e) {
-      debugPrint("Error picking image: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error picking image: $e")),
-      );
+      debugPrint('Error picking image: $e');
     }
   }
 
-  Future<void> _uploadPost() async {
+  // 🔹 Upload post ke Firestore + Firebase Storage
+  Future<void> _submitPost() async {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to post')),
+        const SnackBar(content: Text("⚠️ Please log in first.")),
       );
       return;
     }
 
-    if ((_selectedImage == null && _webImage == null) ||
-        _descriptionController.text.isEmpty) {
+    if (_titleController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an image and add description')),
+        const SnackBar(content: Text("⚠️ Please fill all fields.")),
       );
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() => _isUploading = true);
 
     try {
-      // 🔹 Upload ke Firebase Storage
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final storageRef =
-          FirebaseStorage.instance.ref().child('posts/${user.uid}/$fileName');
+      String imageUrl = _placeholderUrl;
 
-      String imageUrl;
+      // 🔹 Upload ke Firebase Storage kalau ada gambar
+      if (_selectedImage != null || _webImage != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('posts/${user.uid}/$fileName');
 
-      if (kIsWeb) {
-        await storageRef.putData(_webImage!);
-      } else {
-        await storageRef.putFile(_selectedImage!);
+        if (kIsWeb) {
+          await storageRef.putData(_webImage!);
+        } else {
+          await storageRef.putFile(_selectedImage!);
+        }
+
+        imageUrl = await storageRef.getDownloadURL();
       }
 
-      imageUrl = await storageRef.getDownloadURL();
-
-      // 🔹 Simpan data ke Firestore
+      // 🔹 Simpan ke Firestore
       await FirebaseFirestore.instance.collection('posts').add({
         'userId': user.uid,
+        'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'imageUrl': imageUrl,
-        'isPrivate': _isPrivate,
-        'allowComments': _allowComments,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Post uploaded successfully!')),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error uploading post: $e')),
+        const SnackBar(content: Text("✅ Post uploaded successfully!")),
+      );
+
+      // Reset form
+      _titleController.clear();
+      _descriptionController.clear();
+
+      setState(() {
+        _selectedImage = null;
+        _webImage = null;
+      });
+    } catch (e) {
+      debugPrint('Error submitting post: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Upload failed: $e")),
       );
     } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _isUploading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final imagePreview = kIsWeb
-        ? (_webImage != null
-            ? Image.memory(_webImage!, fit: BoxFit.cover)
-            : const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('Upload Image', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ))
-        : (_selectedImage != null
-            ? Image.file(_selectedImage!, fit: BoxFit.cover)
-            : const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('Upload Image', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ));
-
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: const Text(
-          'Create Post',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Create Post'),
+        backgroundColor: const Color(0xFF5E4B8B),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                GestureDetector(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔹 Input Title
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 🔹 Input Description
+              TextField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 🔹 Preview Gambar
+              Center(
+                child: GestureDetector(
                   onTap: _pickImage,
                   child: Container(
-                    height: 200,
+                    height: 180,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
+                        fit: BoxFit.cover,
+                        image: _webImage != null
+                            ? MemoryImage(_webImage!)
+                            : _selectedImage != null
+                                ? FileImage(_selectedImage!)
+                                : NetworkImage(_placeholderUrl)
+                                    as ImageProvider,
+                      ),
                     ),
-                    clipBehavior: Clip.hardEdge,
-                    child: imagePreview,
                   ),
                 ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _descriptionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: "Write something about your post...",
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SwitchListTile(
-                  value: _isPrivate,
-                  onChanged: (v) => setState(() => _isPrivate = v),
-                  title: const Text("Private"),
-                  subtitle: const Text("Only you can see this post"),
-                ),
-                SwitchListTile(
-                  value: _allowComments,
-                  onChanged: (v) => setState(() => _allowComments = v),
-                  title: const Text("Allow Comments"),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _uploadPost,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: const Color(0xFF5E4B8B),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Post'),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+
+              // 🔹 Tombol Upload
+              Center(
+                child: _isUploading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton.icon(
+                        onPressed: _submitPost,
+                        icon: const Icon(Icons.cloud_upload),
+                        label: const Text('Upload Post'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF5E4B8B),
+                          minimumSize: const Size(180, 45),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
