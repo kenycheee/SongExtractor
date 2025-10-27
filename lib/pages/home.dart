@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'extractsongs.dart';
 import 'library.dart';
 import 'profile.dart';
 import 'post.dart';
+import 'songdetail.dart';
 
 // 🏠 Home Screen utama
 class HomeScreen extends StatefulWidget {
@@ -49,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
 
-      // 🎯 Floating Button hanya muncul jika BUKAN di Extract page
       floatingActionButton: _currentIndex != 1
           ? FloatingActionButton(
               onPressed: () {
@@ -90,11 +91,33 @@ class _HomeScreenState extends State<HomeScreen> {
 //
 // --- PAGE: Scores ---
 //
-class ScoresPage extends StatelessWidget {
+class ScoresPage extends StatefulWidget {
+  const ScoresPage({super.key});
+
+  @override
+  State<ScoresPage> createState() => _ScoresPageState();
+}
+
+class _ScoresPageState extends State<ScoresPage> {
+  String _searchQuery = ''; // 🔍 Menyimpan kata kunci pencarian
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 600;
+
+    // 🔎 Filter berdasarkan query
+    final filteredRecent = recentItems
+        .where((item) =>
+            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    final filteredRecommend = recommendItems
+        .where((item) =>
+            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -117,12 +140,17 @@ class ScoresPage extends StatelessWidget {
                     children: [
                       const Icon(Icons.search, color: Colors.grey),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: TextField(
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             hintText: 'Search Scores',
                             border: InputBorder.none,
                           ),
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value; // update query
+                            });
+                          },
                         ),
                       ),
                       VerticalDivider(width: 1, color: Colors.grey.shade300),
@@ -162,14 +190,18 @@ class ScoresPage extends StatelessWidget {
           const SizedBox(height: 8),
           SizedBox(
             height: 140,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: recentItems.length,
-              itemBuilder: (context, index) {
-                final item = recentItems[index];
-                return RecentCard(item: item);
-              },
-            ),
+            child: filteredRecent.isNotEmpty
+                ? ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filteredRecent.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredRecent[index];
+                      return RecentCard(item: item);
+                    },
+                  )
+                : const Center(
+                    child: Text("No results found",
+                        style: TextStyle(color: Colors.grey))),
           ),
 
           const SizedBox(height: 18),
@@ -178,34 +210,44 @@ class ScoresPage extends StatelessWidget {
           const SectionHeader(title: 'Recommend'),
           const SizedBox(height: 8),
 
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (isWide) {
-                return GridView.builder(
-                  itemCount: recommendItems.length,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+          filteredRecommend.isNotEmpty
+              ? LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (isWide) {
+                      return GridView.builder(
+                        itemCount: filteredRecommend.length,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 3,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemBuilder: (context, index) =>
+                            RecommendTile(item: filteredRecommend[index]),
+                      );
+                    } else {
+                      return Column(
+                        children: filteredRecommend
+                            .map((it) => Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 6.0),
+                                  child: RecommendTile(item: it),
+                                ))
+                            .toList(),
+                      );
+                    }
+                  },
+                )
+              : const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text("No recommendations found",
+                        style: TextStyle(color: Colors.grey)),
                   ),
-                  itemBuilder: (context, index) =>
-                      RecommendTile(item: recommendItems[index]),
-                );
-              } else {
-                return Column(
-                  children: recommendItems
-                      .map((it) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6.0),
-                            child: RecommendTile(item: it),
-                          ))
-                      .toList(),
-                );
-              }
-            },
-          ),
+                ),
 
           const SizedBox(height: 24),
         ],
@@ -264,43 +306,59 @@ class RecentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 120,
-      margin: const EdgeInsets.only(right: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                color: const Color(0xFFEEE5FF),
-                child: const Center(
-                  child: Icon(Icons.music_note,
-                      size: 36, color: Color(0xFF5E4B8B)),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SongDetailPage(
+              title: item.title,
+              composer: item.subtitle,
+              rating: item.rating,
+              description:
+                  "This is a classical masterpiece composed by ${item.subtitle}.",
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  color: const Color(0xFFEEE5FF),
+                  child: const Center(
+                    child: Icon(Icons.music_note,
+                        size: 36, color: Color(0xFF5E4B8B)),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(item.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-          Text(item.subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          Row(
-            children: [
-              const Icon(Icons.star, size: 12, color: Colors.orange),
-              const SizedBox(width: 4),
-              Text(item.rating.toString(),
-                  style: const TextStyle(fontSize: 11)),
-            ],
-          )
-        ],
+            const SizedBox(height: 6),
+            Text(item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 12)),
+            Text(item.subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Row(
+              children: [
+                const Icon(Icons.star, size: 12, color: Colors.orange),
+                const SizedBox(width: 4),
+                Text(item.rating.toString(),
+                    style: const TextStyle(fontSize: 11)),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
@@ -312,51 +370,68 @@ class RecommendTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                width: 76,
-                height: 76,
-                color: const Color(0xFFEDE7F6),
-                child: const Center(
-                  child: Icon(Icons.library_music,
-                      size: 36, color: Color(0xFF5E4B8B)),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SongDetailPage(
+              title: item.title,
+              composer: item.subtitle,
+              rating: item.rating,
+              description:
+                  "A timeless composition titled '${item.title}', composed by ${item.subtitle}.",
+            ),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: Colors.grey.shade200)),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  color: const Color(0xFFEDE7F6),
+                  child: const Center(
+                    child: Icon(Icons.library_music,
+                        size: 36, color: Color(0xFF5E4B8B)),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(item.subtitle,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    const Icon(Icons.star, size: 14, color: Colors.orange),
-                    const SizedBox(width: 6),
-                    Text(item.rating.toString()),
-                    const Spacer(),
-                    Text(item.tag,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(item.subtitle,
                         style:
-                            const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ])
-                ],
-              ),
-            )
-          ],
+                            const TextStyle(color: Colors.grey, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      const Icon(Icons.star, size: 14, color: Colors.orange),
+                      const SizedBox(width: 6),
+                      Text(item.rating.toString()),
+                      const Spacer(),
+                      Text(item.tag,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                    ])
+                  ],
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
