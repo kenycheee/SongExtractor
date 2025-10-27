@@ -41,7 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_none, color: Colors.black87),
+                  icon:
+                      const Icon(Icons.notifications_none, color: Colors.black87),
                   onPressed: () {},
                 ),
               ],
@@ -72,10 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.library_music), label: 'Scores'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Extract'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Library'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.library_music), label: 'Scores'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.add_box_outlined), label: 'Extract'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border), label: 'Library'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );
@@ -268,10 +273,12 @@ class RecentCard extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                item.image,
-                width: double.infinity,
-                fit: BoxFit.cover,
+              child: Container(
+                color: const Color(0xFFEEE5FF),
+                child: const Center(
+                  child: Icon(Icons.music_note,
+                      size: 36, color: Color(0xFF5E4B8B)),
+                ),
               ),
             ),
           ),
@@ -316,8 +323,15 @@ class RecommendTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Image.network(item.image,
-                  width: 76, height: 76, fit: BoxFit.cover),
+              child: Container(
+                width: 76,
+                height: 76,
+                color: const Color(0xFFEDE7F6),
+                child: const Center(
+                  child: Icon(Icons.library_music,
+                      size: 36, color: Color(0xFF5E4B8B)),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -368,24 +382,68 @@ class ScoreItem {
   });
 }
 
-final recentItems = List.generate(
-  4,
-  (i) => ScoreItem(
-    image: 'https://picsum.photos/seed/recent$i/200/180',
-    title: ['River Flows In You', 'Swan Lake', 'Merry-Go-Round', 'Canon in D'][i],
-    subtitle: ['Yiruma', 'Pyotr Ilyich Tchaikovsky', 'Joe Hisaishi', 'Pachelbel'][i],
-    rating: [4.8, 5.0, 4.6, 4.9][i],
-    tag: ['Piano', 'Violin', 'Piano', 'Piano'][i],
-  ),
-);
+final recentItems = [
+  const ScoreItem(
+      image: '',
+      title: 'River Flows In You',
+      subtitle: 'Yiruma',
+      rating: 4.8,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Swan Lake',
+      subtitle: 'Pyotr Ilyich Tchaikovsky',
+      rating: 5.0,
+      tag: 'Violin'),
+  const ScoreItem(
+      image: '',
+      title: 'Merry-Go-Round',
+      subtitle: 'Joe Hisaishi',
+      rating: 4.6,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Canon in D',
+      subtitle: 'Pachelbel',
+      rating: 4.9,
+      tag: 'Piano'),
+];
 
-final recommendItems = List.generate(
-  6,
-  (i) => ScoreItem(
-    image: 'https://picsum.photos/seed/reco$i/200/200',
-    title: i.isEven ? 'River Flows In You' : 'Swan Lake',
-    subtitle: i.isEven ? 'Yiruma' : 'Pyotr Ilyich Tchaikovsky',
-    rating: i.isEven ? 4.8 : 5.0,
-    tag: i.isEven ? 'Piano' : 'Violin',
-  ),
-);
+final recommendItems = [
+  const ScoreItem(
+      image: '',
+      title: 'River Flows In You',
+      subtitle: 'Yiruma',
+      rating: 4.8,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Swan Lake',
+      subtitle: 'Pyotr Ilyich Tchaikovsky',
+      rating: 5.0,
+      tag: 'Violin'),
+  const ScoreItem(
+      image: '',
+      title: 'Canon in D',
+      subtitle: 'Pachelbel',
+      rating: 4.9,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Merry-Go-Round',
+      subtitle: 'Joe Hisaishi',
+      rating: 4.7,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Nocturne Op.9 No.2',
+      subtitle: 'Chopin',
+      rating: 4.8,
+      tag: 'Piano'),
+  const ScoreItem(
+      image: '',
+      title: 'Clair de Lune',
+      subtitle: 'Debussy',
+      rating: 4.9,
+      tag: 'Piano'),
+];

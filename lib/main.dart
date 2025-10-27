@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:songextractor/pages/home.dart';
-import 'auth/login_page.dart';
-import 'pages/home.dart';
+import 'package:songextractor/auth/login_page.dart';
 import 'firebase_options.dart'; // ← penting!
 
 void main() async {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -83,8 +84,8 @@ class ProfilePage extends StatelessWidget {
 
                 final userData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
                 final name = userData['name'] ?? user.displayName ?? 'Anonymous';
-                final photoUrl = userData['photoUrl'] ??
-                    'https://cdn-icons-png.flaticon.com/512/706/706830.png';
+                final photoUrl = userData['photoUrl'] ?? '';
+                final localPath = userData['localPath'] ?? ''; // ⬅️ tambahin key lokal
                 final followers = userData['followers'] ?? 0;
                 final following = userData['following'] ?? 0;
 
@@ -101,16 +102,14 @@ class ProfilePage extends StatelessWidget {
                           // --- Profile Header ---
                           Column(
                             children: [
-                              CircleAvatar(
-                                radius: 45,
-                                backgroundColor: Colors.grey.shade200,
-                                backgroundImage: NetworkImage(photoUrl),
-                              ),
+                              _buildProfileImage(photoUrl, localPath),
                               const SizedBox(height: 10),
                               Text(
                                 name,
                                 style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.w600),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 textAlign: TextAlign.center,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -119,15 +118,14 @@ class ProfilePage extends StatelessWidget {
 
                           const SizedBox(height: 12),
 
-                          // --- Stats (Reordered) ---
+                          // --- Stats ---
                           StreamBuilder<QuerySnapshot>(
                             stream: FirebaseFirestore.instance
-                                .collection('posts')
+                                .collection('post')
                                 .where('userId', isEqualTo: user.uid)
                                 .snapshots(),
                             builder: (context, postSnapshot) {
-                              final postsCount =
-                                  postSnapshot.data?.docs.length ?? 0;
+                              final postsCount = postSnapshot.data?.docs.length ?? 0;
 
                               return StreamBuilder<QuerySnapshot>(
                                 stream: FirebaseFirestore.instance
@@ -141,7 +139,7 @@ class ProfilePage extends StatelessWidget {
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _ProfileStat(count: '$postsCount', label: 'posts'),
+                                      _ProfileStat(count: '$postsCount', label: 'post'),
                                       const SizedBox(width: 24),
                                       _ProfileStat(count: '$scoresCount', label: 'scores'),
                                       const SizedBox(width: 24),
@@ -158,12 +156,12 @@ class ProfilePage extends StatelessWidget {
                           const SizedBox(height: 20),
                           Divider(color: Colors.grey.shade300, thickness: 1),
 
-                          // --- TABS SECTION (moved here) ---
+                          // --- TABS SECTION ---
                           DefaultTabController(
                             length: 2,
                             child: Column(
-                              children: const [
-                                TabBar(
+                              children: [
+                                const TabBar(
                                   indicatorColor: Color(0xFF5E4B8B),
                                   labelColor: Colors.black,
                                   unselectedLabelColor: Colors.grey,
@@ -173,8 +171,8 @@ class ProfilePage extends StatelessWidget {
                                   ],
                                 ),
                                 SizedBox(
-                                  height: 400,
-                                  child: TabBarView(
+                                  height: MediaQuery.of(context).size.height * 0.55,
+                                  child: const TabBarView(
                                     physics: BouncingScrollPhysics(),
                                     children: [
                                       _PostsTab(),
@@ -197,6 +195,33 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  /// ✅ FIXED PROFILE IMAGE FUNCTION
+  Widget _buildProfileImage(String photoUrl, [String? localPath]) {
+    const placeholder = 'https://cdn-icons-png.flaticon.com/512/706/706830.png';
+    ImageProvider imageProvider;
+
+    try {
+      if (localPath != null &&
+          localPath.isNotEmpty &&
+          File(localPath).existsSync()) {
+        imageProvider = FileImage(File(localPath));
+      } else if (photoUrl.isNotEmpty && photoUrl.startsWith('http')) {
+        imageProvider = NetworkImage(photoUrl);
+      } else {
+        imageProvider = const NetworkImage(placeholder);
+      }
+    } catch (_) {
+      imageProvider = const NetworkImage(placeholder);
+    }
+
+    return CircleAvatar(
+      radius: 45,
+      backgroundColor: Colors.grey.shade200,
+      backgroundImage: imageProvider,
+      onBackgroundImageError: (_, __) {},
+    );
+  }
+
   Widget _buildNotLoggedIn(BuildContext context) {
     return Center(
       child: Padding(
@@ -209,18 +234,25 @@ class ProfilePage extends StatelessWidget {
             const Text(
               "Login first to see your profile",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => const LoginPage()));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF5E4B8B),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               icon: const Icon(Icons.login),
               label: const Text("Login"),
@@ -242,7 +274,8 @@ class _ProfileStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(count, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        Text(count,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
       ],
@@ -259,11 +292,13 @@ class _PostsTab extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser!;
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('posts')
+          .collection('post')
           .where('userId', isEqualTo: user.uid)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
@@ -280,10 +315,14 @@ class _PostsTab extends StatelessWidget {
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            final imageUrl = data['imageUrl'] ?? '';
+            final localPath = data['localPath'] ?? '';
             final desc = data['description'] ?? '';
             final isPrivate = data['isPrivate'] ?? false;
             final allowComments = data['allowComments'] ?? true;
+
+            // 🖼 placeholder kayak di extracted image
+            const placeholder =
+                'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Swan_Lake_Sheet_Music.png/640px-Swan_Lake_Sheet_Music.png';
 
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -301,39 +340,35 @@ class _PostsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🖼️ Jika ada gambar
-                  if (imageUrl.isNotEmpty)
+                  // ✅ tampilkan gambar placeholder HANYA kalau localPath gak kosong
+                  if (localPath.isNotEmpty)
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(12)),
                       child: Image.network(
-                        imageUrl,
+                        placeholder,
                         width: double.infinity,
                         height: 200,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 200,
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                        ),
                       ),
                     ),
 
+                  // 📝 Deskripsi dan info
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (desc.isNotEmpty)
-                          Text(
-                            desc,
-                            style: const TextStyle(fontSize: 14),
-                          ),
+                          Text(desc,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black87)),
                         const SizedBox(height: 6),
-
                         Row(
                           children: [
                             if (isPrivate)
-                              const Icon(Icons.lock, size: 16, color: Colors.grey),
+                              const Icon(Icons.lock,
+                                  size: 16, color: Colors.grey),
                             if (!allowComments)
                               const Padding(
                                 padding: EdgeInsets.only(left: 8),
@@ -353,7 +388,6 @@ class _PostsTab extends StatelessWidget {
   }
 }
 
-
 // --- Extract Section ---
 class _ExtractsTab extends StatelessWidget {
   const _ExtractsTab();
@@ -367,10 +401,14 @@ class _ExtractsTab extends StatelessWidget {
           .where('userId', isEqualTo: user.uid)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No extracted images yet')));
+          return const Center(
+              child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text('No extracted images yet')));
         }
 
         return ListView.builder(
@@ -417,9 +455,9 @@ class _ScoreTile extends StatelessWidget {
         'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Swan_Lake_Sheet_Music.png/640px-Swan_Lake_Sheet_Music.png';
 
     final ImageProvider imageProvider =
-        (imageUrl.isEmpty || !imageUrl.startsWith('http'))
-            ? const NetworkImage(placeholder)
-            : NetworkImage(imageUrl);
+        (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
+            ? NetworkImage(imageUrl)
+            : const NetworkImage(placeholder);
 
     return Container(
       height: 110,
@@ -428,7 +466,10 @@ class _ScoreTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -445,7 +486,8 @@ class _ScoreTile extends StatelessWidget {
                 width: 100,
                 height: 100,
                 color: Colors.grey[200],
-                child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                child:
+                    const Icon(Icons.broken_image, size: 40, color: Colors.grey),
               ),
             ),
           ),
@@ -458,24 +500,28 @@ class _ScoreTile extends StatelessWidget {
                 Text(title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 4),
                 Text(subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
                     const Icon(Icons.star, size: 14, color: Colors.orange),
                     const SizedBox(width: 4),
-                    Text(rating.toStringAsFixed(1), style: const TextStyle(fontSize: 12)),
+                    Text(rating.toStringAsFixed(1),
+                        style: const TextStyle(fontSize: 12)),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text('• $tag',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
                     ),
                   ],
                 ),

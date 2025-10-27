@@ -102,7 +102,7 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
           automaticallyImplyLeading: false,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          centerTitle: true,
+          centerTitle: false,
           toolbarHeight: 80,
           title: const Text(
             'Extract from Image',
@@ -146,7 +146,7 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         toolbarHeight: 80,
         title: const Text(
           'Extract from Image',

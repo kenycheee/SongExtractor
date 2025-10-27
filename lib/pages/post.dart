@@ -1,11 +1,8 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class PostPage extends StatefulWidget {
@@ -16,38 +13,23 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
-  final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  File? _selectedImage;
-  Uint8List? _webImage;
+  XFile? _selectedImage;
   bool _isUploading = false;
+  final picker = ImagePicker();
 
-  // 🔹 Placeholder jika gak ada gambar
-  final String _placeholderUrl =
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/640px-No_image_available.svg.png';
-
-  // 🔹 Ambil gambar (support Web dan Mobile)
   Future<void> _pickImage() async {
     try {
-      if (kIsWeb) {
-        final result = await FilePicker.platform.pickFiles(type: FileType.image);
-        if (result != null && result.files.single.bytes != null) {
-          setState(() => _webImage = result.files.single.bytes);
-        }
-      } else {
-        final picker = ImagePicker();
-        final picked = await picker.pickImage(source: ImageSource.gallery);
-        if (picked != null) {
-          setState(() => _selectedImage = File(picked.path));
-        }
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked != null) {
+        setState(() => _selectedImage = picked);
       }
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
   }
 
-  // 🔹 Upload post ke Firestore + Firebase Storage
   Future<void> _submitPost() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -58,10 +40,9 @@ class _PostPageState extends State<PostPage> {
       return;
     }
 
-    if (_titleController.text.trim().isEmpty ||
-        _descriptionController.text.trim().isEmpty) {
+    if (_descriptionController.text.trim().isEmpty && _selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Please fill all fields.")),
+        const SnackBar(content: Text("⚠️ Description or image required.")),
       );
       return;
     }
@@ -69,44 +50,26 @@ class _PostPageState extends State<PostPage> {
     setState(() => _isUploading = true);
 
     try {
-      String imageUrl = _placeholderUrl;
+      // kalau user nggak pilih gambar, simpan null aja
+      final imagePath = _selectedImage != null ? _selectedImage!.path : null;
 
-      // 🔹 Upload ke Firebase Storage kalau ada gambar
-      if (_selectedImage != null || _webImage != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('posts/${user.uid}/$fileName');
-
-        if (kIsWeb) {
-          await storageRef.putData(_webImage!);
-        } else {
-          await storageRef.putFile(_selectedImage!);
-        }
-
-        imageUrl = await storageRef.getDownloadURL();
-      }
-
-      // 🔹 Simpan ke Firestore
-      await FirebaseFirestore.instance.collection('posts').add({
+      final postData = {
         'userId': user.uid,
-        'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': imageUrl,
+        'localPath': imagePath ?? '', // biar aman tetep ada field
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      await FirebaseFirestore.instance.collection('post').add(postData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Post uploaded successfully!")),
       );
 
       // Reset form
-      _titleController.clear();
       _descriptionController.clear();
-
       setState(() {
         _selectedImage = null;
-        _webImage = null;
       });
     } catch (e) {
       debugPrint('Error submitting post: $e');
@@ -120,84 +83,158 @@ class _PostPageState extends State<PostPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final width = MediaQuery.of(context).size.width;
+    final isWide = width > 600;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: false,
+          toolbarHeight: 80,
+          title: const Text(
+            'Create Post',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'You must login first to create a post',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5E4B8B),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.login),
+                label: const Text('Login'),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Post'),
-        backgroundColor: const Color(0xFF5E4B8B),
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        toolbarHeight: 80,
+        title: const Text(
+          'Create Post',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Input Title
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: isWide ? 500 : double.infinity),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: _inputDecoration('Add description ...'),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // 🔹 Input Description
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 🔹 Preview Gambar
-              Center(
-                child: GestureDetector(
+                const SizedBox(height: 20),
+                GestureDetector(
                   onTap: _pickImage,
                   child: Container(
                     height: 180,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        fit: BoxFit.cover,
-                        image: _webImage != null
-                            ? MemoryImage(_webImage!)
-                            : _selectedImage != null
-                                ? FileImage(_selectedImage!)
-                                : NetworkImage(_placeholderUrl)
-                                    as ImageProvider,
-                      ),
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(6),
                     ),
+                    child: _selectedImage == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.image, size: 36, color: Colors.grey),
+                              SizedBox(height: 8),
+                              Text('Add image for post (optional) ...',
+                                  style: TextStyle(color: Colors.grey)),
+                            ],
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: kIsWeb
+                                ? Image.network(
+                                    _selectedImage!.path,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  )
+                                : Image.file(
+                                    File(_selectedImage!.path),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                          ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // 🔹 Tombol Upload
-              Center(
-                child: _isUploading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton.icon(
-                        onPressed: _submitPost,
-                        icon: const Icon(Icons.cloud_upload),
-                        label: const Text('Upload Post'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5E4B8B),
-                          minimumSize: const Size(180, 45),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 24),
+                Center(
+                  child: _isUploading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton.icon(
+                          onPressed: _submitPost,
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF5E4B8B),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            minimumSize: const Size(180, 45),
+                          ),
+                          icon: const Icon(Icons.cloud_upload),
+                          label: const Text(
+                            'Upload Post',
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: Colors.grey.shade400),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(6)),
+        borderSide: BorderSide(color: Color(0xFF5E4B8B)),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 }
