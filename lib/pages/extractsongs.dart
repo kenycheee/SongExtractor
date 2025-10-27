@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ExtractSongsPage extends StatefulWidget {
@@ -17,7 +16,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _composerController = TextEditingController();
-
   XFile? _selectedImage;
   bool _isUploading = false;
   final picker = ImagePicker();
@@ -25,9 +23,7 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
   Future<void> _pickImage() async {
     try {
       final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        setState(() => _selectedImage = picked);
-      }
+      if (picked != null) setState(() => _selectedImage = picked);
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
@@ -35,18 +31,12 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
 
   Future<void> _submitExtract() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Please log in first.")),
-      );
+      _showSnack('⚠️ Please log in first.');
       return;
     }
-
     if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Please select an image first.")),
-      );
+      _showSnack('⚠️ Please select an image first.');
       return;
     }
 
@@ -54,39 +44,29 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
 
     try {
       final imagePath = _selectedImage!.path;
-
-      final extractData = {
+      await FirebaseFirestore.instance.collection('extracted_images').add({
         'userId': user.uid,
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'composer': _composerController.text.trim(),
         'localPath': imagePath,
         'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      await FirebaseFirestore.instance
-          .collection('extracted_images')
-          .add(extractData);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Image added for extraction!")),
-      );
-
-      _titleController.clear();
-      _descriptionController.clear();
-      _composerController.clear();
-
-      setState(() {
-        _selectedImage = null;
       });
+
+      _showSnack('✅ Image added for extraction!');
+      _titleController.clear();
+      _composerController.clear();
+      _descriptionController.clear();
+      setState(() => _selectedImage = null);
     } catch (e) {
-      debugPrint('Error submitting extract: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Upload failed: $e")),
-      );
+      _showSnack('❌ Upload failed: $e');
     } finally {
       setState(() => _isUploading = false);
     }
+  }
+
+  void _showSnack(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
@@ -95,108 +75,64 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 600;
 
-    // 🔹 Jika belum login, tampilkan halaman khusus
+    // 🟣 Jika belum login
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-          toolbarHeight: 80,
-          title: const Text(
-            'Extract from Image',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'You must login first to extract',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/login');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5E4B8B),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.login),
-                label: const Text('Login'),
-              )
-            ],
-          ),
-        ),
+        backgroundColor: const Color(0xFFF9F8FB),
+        appBar: _buildAppBar(),
+        body: _buildLoginPrompt(),
       );
     }
 
-    // 🔹 Kalau sudah login, tampilkan halaman normal
+    // 🟣 Kalau sudah login
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        toolbarHeight: 80,
-        title: const Text(
-          'Extract from Image',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
-      ),
+      backgroundColor: const Color(0xFFF9F8FB),
+      appBar: _buildAppBar(),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: isWide ? 500 : double.infinity),
+            constraints: BoxConstraints(maxWidth: isWide ? 520 : double.infinity),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                    controller: _titleController,
-                    decoration: _inputDecoration('Title ...')),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: _composerController,
-                    decoration: _inputDecoration('Compose by ...')),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: _descriptionController,
-                    maxLines: 3,
-                    decoration: _inputDecoration('Add description ...')),
+                _buildInputField('Title ...', _titleController),
+                const SizedBox(height: 14),
+                _buildInputField('Compose by ...', _composerController),
+                const SizedBox(height: 14),
+                _buildInputField('Add description ...', _descriptionController, maxLines: 3),
                 const SizedBox(height: 20),
+
+                // 🖼️ Upload area
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(
-                    height: 180,
+                    height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade200,
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: _selectedImage == null
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Icon(Icons.image_search,
-                                  size: 36, color: Colors.grey),
-                              SizedBox(height: 8),
-                              Text('Add image to extract ...',
-                                  style: TextStyle(color: Colors.grey)),
+                              Icon(Icons.image_search, size: 40, color: Color(0xFF6B4EFF)),
+                              SizedBox(height: 10),
+                              Text('Tap to add image for extraction',
+                                  style: TextStyle(color: Colors.grey, fontSize: 14)),
                             ],
                           )
                         : ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(12),
                             child: kIsWeb
                                 ? Image.network(
                                     _selectedImage!.path,
@@ -211,22 +147,26 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
+
+                // 🔘 Extract button
                 Center(
                   child: _isUploading
-                      ? const CircularProgressIndicator()
+                      ? const CircularProgressIndicator(color: Color(0xFF6B4EFF))
                       : ElevatedButton.icon(
                           onPressed: _submitExtract,
                           style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6B4EFF),
                             foregroundColor: Colors.white,
-                            backgroundColor: const Color(0xFF5E4B8B),
+                            elevation: 3,
+                            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            minimumSize: const Size(180, 45),
+                                borderRadius: BorderRadius.circular(10)),
                           ),
-                          icon: const Icon(Icons.auto_awesome),
+                          icon: const Icon(Icons.auto_awesome, size: 20),
                           label: const Text('Extract from Image',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w600)),
                         ),
                 ),
               ],
@@ -237,19 +177,79 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade400),
+  // 🟪 Input Field Builder
+  Widget _buildInputField(String hint, TextEditingController controller,
+      {int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(color: Colors.grey.shade100, blurRadius: 5, offset: const Offset(0, 2))
+        ],
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(6)),
-        borderSide: BorderSide(color: Color(0xFF5E4B8B)),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    );
+  }
+
+  // 🟣 AppBar (sama gaya dengan ScoresPage)
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      automaticallyImplyLeading: false,
+      toolbarHeight: 80,
+      title: const Text(
+        'Extract from Image',
+        style: TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+        ),
+      ),
+    );
+  }
+
+  // 🔐 Tampilan jika belum login
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'You must log in to use this feature',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 26),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B4EFF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.login),
+              label: const Text('Login', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

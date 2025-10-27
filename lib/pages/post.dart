@@ -14,7 +14,6 @@ class PostPage extends StatefulWidget {
 
 class _PostPageState extends State<PostPage> {
   final _descriptionController = TextEditingController();
-
   XFile? _selectedImage;
   bool _isUploading = false;
   final picker = ImagePicker();
@@ -22,9 +21,7 @@ class _PostPageState extends State<PostPage> {
   Future<void> _pickImage() async {
     try {
       final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        setState(() => _selectedImage = picked);
-      }
+      if (picked != null) setState(() => _selectedImage = picked);
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
@@ -32,53 +29,39 @@ class _PostPageState extends State<PostPage> {
 
   Future<void> _submitPost() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Please log in first.")),
-      );
+      _showSnack('⚠️ Please log in first.');
       return;
     }
 
     if (_descriptionController.text.trim().isEmpty && _selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Description or image required.")),
-      );
+      _showSnack('⚠️ Description or image required.');
       return;
     }
 
     setState(() => _isUploading = true);
 
     try {
-      // kalau user nggak pilih gambar, simpan null aja
-      final imagePath = _selectedImage != null ? _selectedImage!.path : null;
-
-      final postData = {
+      final imagePath = _selectedImage?.path ?? '';
+      await FirebaseFirestore.instance.collection('post').add({
         'userId': user.uid,
         'description': _descriptionController.text.trim(),
-        'localPath': imagePath ?? '', // biar aman tetep ada field
+        'localPath': imagePath,
         'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      await FirebaseFirestore.instance.collection('post').add(postData);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Post uploaded successfully!")),
-      );
-
-      // Reset form
-      _descriptionController.clear();
-      setState(() {
-        _selectedImage = null;
       });
+
+      _showSnack('✅ Post uploaded successfully!');
+      _descriptionController.clear();
+      setState(() => _selectedImage = null);
     } catch (e) {
-      debugPrint('Error submitting post: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Upload failed: $e")),
-      );
+      _showSnack('❌ Upload failed: $e');
     } finally {
       setState(() => _isUploading = false);
     }
+  }
+
+  void _showSnack(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
@@ -87,99 +70,64 @@ class _PostPageState extends State<PostPage> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 600;
 
+    // 🔐 Jika belum login
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-          toolbarHeight: 80,
-          title: const Text(
-            'Create Post',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'You must login first to create a post',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/login');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5E4B8B),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.login),
-                label: const Text('Login'),
-              )
-            ],
-          ),
-        ),
+        backgroundColor: const Color(0xFFF9F8FB),
+        appBar: _buildAppBar(context),
+        body: _buildLoginPrompt(),
       );
     }
 
+    // 🟪 Jika sudah login
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        toolbarHeight: 80,
-        title: const Text(
-          'Create Post',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
-      ),
+      backgroundColor: const Color(0xFFF9F8FB),
+      appBar: _buildAppBar(context),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: isWide ? 500 : double.infinity),
+            constraints: BoxConstraints(maxWidth: isWide ? 520 : double.infinity),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: _descriptionController,
-                  maxLines: 3,
-                  decoration: _inputDecoration('Add description ...'),
-                ),
+                _buildInputField('Write something here...', _descriptionController,
+                    maxLines: 4),
                 const SizedBox(height: 20),
+
+                // 🖼️ Upload area
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(
-                    height: 180,
+                    height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade200,
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: _selectedImage == null
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Icon(Icons.image, size: 36, color: Colors.grey),
-                              SizedBox(height: 8),
-                              Text('Add image for post (optional) ...',
-                                  style: TextStyle(color: Colors.grey)),
+                              Icon(Icons.image_outlined,
+                                  size: 40, color: Color(0xFF6B4EFF)),
+                              SizedBox(height: 10),
+                              Text(
+                                'Tap to add an image',
+                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
                             ],
                           )
                         : ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(12),
                             child: kIsWeb
                                 ? Image.network(
                                     _selectedImage!.path,
@@ -194,24 +142,27 @@ class _PostPageState extends State<PostPage> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
+
+                // 🔘 Upload button
                 Center(
                   child: _isUploading
-                      ? const CircularProgressIndicator()
+                      ? const CircularProgressIndicator(color: Color(0xFF6B4EFF))
                       : ElevatedButton.icon(
                           onPressed: _submitPost,
                           style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6B4EFF),
                             foregroundColor: Colors.white,
-                            backgroundColor: const Color(0xFF5E4B8B),
+                            elevation: 3,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 26, vertical: 14),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            minimumSize: const Size(180, 45),
+                                borderRadius: BorderRadius.circular(10)),
                           ),
-                          icon: const Icon(Icons.cloud_upload),
-                          label: const Text(
-                            'Upload Post',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                          icon: const Icon(Icons.cloud_upload_rounded, size: 20),
+                          label: const Text('Upload Post',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w600)),
                         ),
                 ),
               ],
@@ -222,19 +173,94 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade400),
+  // 🟣 Input Field
+  Widget _buildInputField(String hint, TextEditingController controller,
+      {int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.grey.shade100, blurRadius: 5, offset: const Offset(0, 2))
+        ],
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(6)),
-        borderSide: BorderSide(color: Color(0xFF5E4B8B)),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    );
+  }
+
+  // 🟪 AppBar dengan tombol back arrow
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      automaticallyImplyLeading: false,
+      toolbarHeight: 80,
+      title: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.black87, size: 22),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Create Post',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🔒 Tampilan jika belum login
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'You must log in to use this feature',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 26),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B4EFF),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape:
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.login),
+              label: const Text('Login',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

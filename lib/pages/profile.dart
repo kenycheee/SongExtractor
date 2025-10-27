@@ -162,7 +162,7 @@ class ProfilePage extends StatelessWidget {
                             child: Column(
                               children: [
                                 const TabBar(
-                                  indicatorColor: Color(0xFF5E4B8B),
+                                  indicatorColor: Color(0xFF6B4EFF),
                                   labelColor: Colors.black,
                                   unselectedLabelColor: Colors.grey,
                                   tabs: [
@@ -247,7 +247,7 @@ class ProfilePage extends StatelessWidget {
                     context, MaterialPageRoute(builder: (_) => const LoginPage()));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5E4B8B),
+                backgroundColor: Color(0xFF6B4EFF),
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

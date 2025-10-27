@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'extractsongs.dart';
 import 'library.dart';
 import 'profile.dart';
 import 'post.dart';
 import 'songdetail.dart';
 
-// 🏠 Home Screen utama
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,71 +16,66 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    ScoresPage(),
-    ExtractSongsPage(),
-    LibraryPage(),
-    ProfilePage(),
+    const ScoresPage(),
+    const ExtractSongsPage(),
+    const LibraryPage(),
+    const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9F8FB),
       appBar: _currentIndex == 0
           ? AppBar(
               elevation: 0,
-              automaticallyImplyLeading: false,
-              toolbarHeight: 60,
               backgroundColor: Colors.transparent,
               centerTitle: false,
+              automaticallyImplyLeading: false,
               title: const Text(
                 'SongExtractor',
                 style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
                 ),
               ),
               actions: [
                 IconButton(
-                  icon:
-                      const Icon(Icons.notifications_none, color: Colors.black87),
+                  icon: const Icon(Icons.notifications_none, color: Colors.black87),
                   onPressed: () {},
                 ),
+                const SizedBox(width: 8),
               ],
             )
           : null,
-
       floatingActionButton: _currentIndex != 1
           ? FloatingActionButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PostPage()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const PostPage()));
               },
-              backgroundColor: const Color(0xFF5E4B8B),
+              backgroundColor: const Color(0xFF6B4EFF),
               shape: const CircleBorder(),
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
-
       body: SafeArea(child: _pages[_currentIndex]),
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-        selectedItemColor: const Color(0xFF5E4B8B),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.library_music), label: 'Scores'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add_box_outlined), label: 'Extract'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border), label: 'Library'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.white,
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+          selectedItemColor: const Color(0xFF6B4EFF),
+          unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.library_music), label: 'Scores'),
+            BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Extract'),
+            BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Library'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }
@@ -99,165 +92,175 @@ class ScoresPage extends StatefulWidget {
 }
 
 class _ScoresPageState extends State<ScoresPage> {
-  String _searchQuery = ''; // 🔍 Menyimpan kata kunci pencarian
+  String _searchQuery = '';
+  String _selectedCategory = 'All';
+
+  final List<String> _categories = ['All', 'Violin', 'Piano', 'Flute', 'Guitar'];
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isWide = width > 600;
+    final isWide = MediaQuery.of(context).size.width > 600;
 
-    // 🔎 Filter berdasarkan query
-    final filteredRecent = recentItems
-        .where((item) =>
-            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    // 🔍 Filter gabungan (pencarian + kategori)
+    bool filterItem(ScoreItem item) {
+      final matchSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchCategory = _selectedCategory == 'All' || item.tag == _selectedCategory;
+      return matchSearch && matchCategory;
+    }
 
-    final filteredRecommend = recommendItems
-        .where((item) =>
-            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final filteredRecent = recentItems.where(filterItem).toList();
+    final filteredRecommend = recommendItems.where(filterItem).toList();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ListView(
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      children: [
+        _buildSearchBar(),
+        const SizedBox(height: 20),
+        _buildCategorySelector(),
+        const SizedBox(height: 24),
+        const SectionHeader(title: 'Recent View'),
+        const SizedBox(height: 10),
+        _buildRecentSection(filteredRecent),
+        const SizedBox(height: 28),
+        const SectionHeader(title: 'Recommended'),
+        const SizedBox(height: 10),
+        _buildRecommendSection(filteredRecommend, isWide),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
+      ),
+      child: Row(
         children: [
-          const SizedBox(height: 8),
-
-          // 🔍 Search bar
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'Search Scores',
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _searchQuery = value; // update query
-                            });
-                          },
-                        ),
-                      ),
-                      VerticalDivider(width: 1, color: Colors.grey.shade300),
-                      IconButton(
-                        icon: const Icon(Icons.filter_list),
-                        onPressed: () {},
-                      )
-                    ],
-                  ),
-                ),
+          const SizedBox(width: 12),
+          const Icon(Icons.search, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Search Scores...',
+                border: InputBorder.none,
               ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          // 🎻 Categories
-          const SectionHeader(title: 'Categories'),
-          const SizedBox(height: 8),
-
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: const [
-                CategoryChip(label: 'Violin', icon: Icons.music_note),
-                CategoryChip(label: 'Piano', icon: Icons.queue_music),
-                CategoryChip(label: 'Flute', icon: Icons.audiotrack),
-                CategoryChip(label: 'Guitar', icon: Icons.library_music),
-              ],
+              onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
-
-          const SizedBox(height: 18),
-
-          // 🕒 Recent View
-          const SectionHeader(title: 'Recent View'),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 140,
-            child: filteredRecent.isNotEmpty
-                ? ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: filteredRecent.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredRecent[index];
-                      return RecentCard(item: item);
-                    },
-                  )
-                : const Center(
-                    child: Text("No results found",
-                        style: TextStyle(color: Colors.grey))),
+          IconButton(
+            icon: const Icon(Icons.filter_alt_outlined, color: Colors.grey),
+            onPressed: () {},
           ),
-
-          const SizedBox(height: 18),
-
-          // 💡 Recommend
-          const SectionHeader(title: 'Recommend'),
-          const SizedBox(height: 8),
-
-          filteredRecommend.isNotEmpty
-              ? LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (isWide) {
-                      return GridView.builder(
-                        itemCount: filteredRecommend.length,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemBuilder: (context, index) =>
-                            RecommendTile(item: filteredRecommend[index]),
-                      );
-                    } else {
-                      return Column(
-                        children: filteredRecommend
-                            .map((it) => Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 6.0),
-                                  child: RecommendTile(item: it),
-                                ))
-                            .toList(),
-                      );
-                    }
-                  },
-                )
-              : const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text("No recommendations found",
-                        style: TextStyle(color: Colors.grey)),
-                  ),
-                ),
-
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
+
+  Widget _buildCategorySelector() {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final category = _categories[i];
+          final selected = _selectedCategory == category;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = category),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF6B4EFF) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: selected
+                    ? [BoxShadow(color: Colors.purple.shade100, blurRadius: 8)]
+                    : [BoxShadow(color: Colors.grey.shade200, blurRadius: 4)],
+              ),
+              child: Center(
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    color: selected ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRecentSection(List<ScoreItem> items) {
+    if (items.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Text("No recent songs found", style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 180,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (_, i) => Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: _RecentCard(item: items[i]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendSection(List<ScoreItem> items, bool isWide) {
+    if (items.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Text("No recommendations found", style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    if (isWide) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 3.6,
+        ),
+        itemBuilder: (_, i) => _RecommendTile(item: items[i]),
+      );
+    } else {
+      return Column(
+        children: items
+            .map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _RecommendTile(item: e),
+                ))
+            .toList(),
+      );
+    }
+  }
 }
 
 //
-// --- UI Components ---
+// --- COMPONENTS ---
 //
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -266,96 +269,71 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const Icon(Icons.chevron_right)
+        Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.black87)),
+        const Spacer(),
+        Icon(Icons.chevron_right, color: Colors.grey.shade500),
       ],
     );
   }
 }
 
-class CategoryChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  const CategoryChip({required this.label, required this.icon, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Chip(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.grey.shade300),
-        ),
-        backgroundColor: Colors.white,
-        avatar: CircleAvatar(
-          backgroundColor: Colors.grey.shade200,
-          child: Icon(icon, size: 16, color: Colors.black87),
-        ),
-        label: Text(label),
-      ),
-    );
-  }
-}
-
-class RecentCard extends StatelessWidget {
+class _RecentCard extends StatelessWidget {
   final ScoreItem item;
-  const RecentCard({required this.item, super.key});
+  const _RecentCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SongDetailPage(
-              title: item.title,
-              composer: item.subtitle,
-              rating: item.rating,
-              description:
-                  "This is a classical masterpiece composed by ${item.subtitle}.",
-            ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SongDetailPage(
+            title: item.title,
+            composer: item.subtitle,
+            rating: item.rating,
+            description: "A masterpiece by ${item.subtitle}.",
           ),
-        );
-      },
+        ),
+      ),
       child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(right: 12),
+        width: 140,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  color: const Color(0xFFEEE5FF),
-                  child: const Center(
-                    child: Icon(Icons.music_note,
-                        size: 36, color: Color(0xFF5E4B8B)),
-                  ),
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Container(
+                height: 100,
+                color: const Color(0xFFEDE7F6),
+                child: const Icon(Icons.music_note, color: Color(0xFF6B4EFF), size: 40),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 12)),
-            Text(item.subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            Row(
-              children: [
-                const Icon(Icons.star, size: 12, color: Colors.orange),
-                const SizedBox(width: 4),
-                Text(item.rating.toString(),
-                    style: const TextStyle(fontSize: 11)),
-              ],
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  Text(item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(item.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.star, size: 12, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(item.rating.toString(), style: const TextStyle(fontSize: 11)),
+                  ]),
+                ],
+              ),
             )
           ],
         ),
@@ -364,68 +342,73 @@ class RecentCard extends StatelessWidget {
   }
 }
 
-class RecommendTile extends StatelessWidget {
+class _RecommendTile extends StatelessWidget {
   final ScoreItem item;
-  const RecommendTile({required this.item, super.key});
+  const _RecommendTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SongDetailPage(
-              title: item.title,
-              composer: item.subtitle,
-              rating: item.rating,
-              description:
-                  "A timeless composition titled '${item.title}', composed by ${item.subtitle}.",
-            ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SongDetailPage(
+            title: item.title,
+            composer: item.subtitle,
+            rating: item.rating,
+            description: "‘${item.title}’ is composed by ${item.subtitle}.",
           ),
-        );
-      },
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade200)),
+        ),
+      ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 8)],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  width: 76,
-                  height: 76,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
                   color: const Color(0xFFEDE7F6),
-                  child: const Center(
-                    child: Icon(Icons.library_music,
-                        size: 36, color: Color(0xFF5E4B8B)),
-                  ),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.library_music, size: 38, color: Color(0xFF6B4EFF)),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(item.title,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                     const SizedBox(height: 4),
                     Text(item.subtitle,
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 13)),
+                        style: const TextStyle(color: Colors.grey, fontSize: 13)),
                     const SizedBox(height: 8),
                     Row(children: [
                       const Icon(Icons.star, size: 14, color: Colors.orange),
-                      const SizedBox(width: 6),
-                      Text(item.rating.toString()),
+                      const SizedBox(width: 4),
+                      Text(item.rating.toString(), style: const TextStyle(fontSize: 13)),
                       const Spacer(),
-                      Text(item.tag,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2EFFF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          item.tag,
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF6B4EFF)),
+                        ),
+                      ),
                     ])
                   ],
                 ),
@@ -439,7 +422,7 @@ class RecommendTile extends StatelessWidget {
 }
 
 //
-// --- Dummy Data ---
+// --- DUMMY DATA ---
 //
 class ScoreItem {
   final String image;
@@ -458,67 +441,16 @@ class ScoreItem {
 }
 
 final recentItems = [
-  const ScoreItem(
-      image: '',
-      title: 'River Flows In You',
-      subtitle: 'Yiruma',
-      rating: 4.8,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Swan Lake',
-      subtitle: 'Pyotr Ilyich Tchaikovsky',
-      rating: 5.0,
-      tag: 'Violin'),
-  const ScoreItem(
-      image: '',
-      title: 'Merry-Go-Round',
-      subtitle: 'Joe Hisaishi',
-      rating: 4.6,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Canon in D',
-      subtitle: 'Pachelbel',
-      rating: 4.9,
-      tag: 'Piano'),
+  const ScoreItem(image: '', title: 'River Flows In You', subtitle: 'Yiruma', rating: 4.8, tag: 'Piano'),
+  const ScoreItem(image: '', title: 'Swan Lake', subtitle: 'Tchaikovsky', rating: 5.0, tag: 'Violin'),
+  const ScoreItem(image: '', title: 'Merry-Go-Round', subtitle: 'Joe Hisaishi', rating: 4.6, tag: 'Piano'),
+  const ScoreItem(image: '', title: 'Canon in D', subtitle: 'Pachelbel', rating: 4.9, tag: 'Violin'),
 ];
 
 final recommendItems = [
-  const ScoreItem(
-      image: '',
-      title: 'River Flows In You',
-      subtitle: 'Yiruma',
-      rating: 4.8,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Swan Lake',
-      subtitle: 'Pyotr Ilyich Tchaikovsky',
-      rating: 5.0,
-      tag: 'Violin'),
-  const ScoreItem(
-      image: '',
-      title: 'Canon in D',
-      subtitle: 'Pachelbel',
-      rating: 4.9,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Merry-Go-Round',
-      subtitle: 'Joe Hisaishi',
-      rating: 4.7,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Nocturne Op.9 No.2',
-      subtitle: 'Chopin',
-      rating: 4.8,
-      tag: 'Piano'),
-  const ScoreItem(
-      image: '',
-      title: 'Clair de Lune',
-      subtitle: 'Debussy',
-      rating: 4.9,
-      tag: 'Piano'),
+  const ScoreItem(image: '', title: 'Clair de Lune', subtitle: 'Debussy', rating: 4.9, tag: 'Piano'),
+  const ScoreItem(image: '', title: 'Swan Lake', subtitle: 'Tchaikovsky', rating: 5.0, tag: 'Violin'),
+  const ScoreItem(image: '', title: 'Nocturne Op.9 No.2', subtitle: 'Chopin', rating: 4.8, tag: 'Piano'),
+  const ScoreItem(image: '', title: 'Canon in D', subtitle: 'Pachelbel', rating: 4.9, tag: 'Violin'),
+  const ScoreItem(image: '', title: 'Aria in D Minor', subtitle: 'Bach', rating: 4.7, tag: 'Flute'),
 ];
