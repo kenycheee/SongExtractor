@@ -101,13 +101,11 @@ class _SongDetailPageState extends State<SongDetailPage> {
                 pinned: true,
                 backgroundColor: Colors.white,
                 elevation: 0,
-                // 🔹 Hapus default leading, biar kita bikin custom
                 leading: const SizedBox.shrink(),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // 🖼️ Gambar cover
                       widget.imageUrl != null && widget.imageUrl!.isNotEmpty
                           ? Image.network(
                               widget.imageUrl!,
@@ -126,7 +124,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                               ),
                             ),
 
-                      // 🌫️ Gradient bawah
                       Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
@@ -137,7 +134,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                         ),
                       ),
 
-                      // 🔙 Tombol back melingkar elegan
                       Positioned(
                         top: 40,
                         left: 16,
@@ -166,7 +162,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                         ),
                       ),
 
-                      // ❤️ Favorite button di atas gambar
                       Positioned(
                         top: 40,
                         right: 20,
@@ -209,7 +204,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                 ),
               ),
 
-              // 🔹 Detail lagu di bawah
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
@@ -266,7 +260,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
             ],
           ),
 
-          // 🔹 Bottom Sheet informatif
           DraggableScrollableSheet(
             initialChildSize: 0.22,
             minChildSize: 0.15,

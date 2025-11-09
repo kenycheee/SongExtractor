@@ -75,7 +75,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 600;
 
-    // 🟣 Jika belum login
     if (user == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF9F8FB),
@@ -84,7 +83,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
       );
     }
 
-    // 🟣 Kalau sudah login
     return Scaffold(
       backgroundColor: const Color(0xFFF9F8FB),
       appBar: _buildAppBar(),
@@ -103,7 +101,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
                 _buildInputField('Add description ...', _descriptionController, maxLines: 3),
                 const SizedBox(height: 20),
 
-                // 🖼️ Upload area
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(
@@ -149,7 +146,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // 🔘 Extract button
                 Center(
                   child: _isUploading
                       ? const CircularProgressIndicator(color: Color(0xFF6B4EFF))
@@ -177,7 +173,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     );
   }
 
-  // 🟪 Input Field Builder
   Widget _buildInputField(String hint, TextEditingController controller,
       {int maxLines = 1}) {
     return Container(
@@ -201,7 +196,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     );
   }
 
-  // 🟣 AppBar (sama gaya dengan ScoresPage)
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -220,7 +214,6 @@ class _ExtractSongsPageState extends State<ExtractSongsPage> {
     );
   }
 
-  // 🔐 Tampilan jika belum login
   Widget _buildLoginPrompt() {
     return Center(
       child: Padding(

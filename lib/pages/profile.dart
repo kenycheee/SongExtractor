@@ -69,7 +69,6 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
 
-      // BODY
       body: user == null
           ? _buildNotLoggedIn(context)
           : StreamBuilder<DocumentSnapshot>(
@@ -99,7 +98,6 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           const SizedBox(height: 16),
 
-                          // --- Profile Header ---
                           Column(
                             children: [
                               _buildProfileImage(photoUrl, localPath),
@@ -118,7 +116,6 @@ class ProfilePage extends StatelessWidget {
 
                           const SizedBox(height: 12),
 
-                          // --- Stats ---
                           StreamBuilder<QuerySnapshot>(
                             stream: FirebaseFirestore.instance
                                 .collection('post')
@@ -195,7 +192,6 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  /// ✅ FIXED PROFILE IMAGE FUNCTION
   Widget _buildProfileImage(String photoUrl, [String? localPath]) {
     const placeholder = 'https://cdn-icons-png.flaticon.com/512/706/706830.png';
     ImageProvider imageProvider;
@@ -264,7 +260,6 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-// --- Profile Stat Widget ---
 class _ProfileStat extends StatelessWidget {
   final String count;
   final String label;
@@ -283,7 +278,6 @@ class _ProfileStat extends StatelessWidget {
   }
 }
 
-// --- Posts Section ---
 class _PostsTab extends StatelessWidget {
   const _PostsTab();
 
@@ -320,7 +314,6 @@ class _PostsTab extends StatelessWidget {
             final isPrivate = data['isPrivate'] ?? false;
             final allowComments = data['allowComments'] ?? true;
 
-            // 🖼 placeholder kayak di extracted image
             const placeholder =
                 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Swan_Lake_Sheet_Music.png/640px-Swan_Lake_Sheet_Music.png';
 
@@ -353,7 +346,6 @@ class _PostsTab extends StatelessWidget {
                       ),
                     ),
 
-                  // 📝 Deskripsi dan info
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -388,7 +380,6 @@ class _PostsTab extends StatelessWidget {
   }
 }
 
-// --- Extract Section ---
 class _ExtractsTab extends StatelessWidget {
   const _ExtractsTab();
 
@@ -433,7 +424,6 @@ class _ExtractsTab extends StatelessWidget {
   }
 }
 
-// --- Score Tile Widget ---
 class _ScoreTile extends StatelessWidget {
   final String imageUrl;
   final String title;

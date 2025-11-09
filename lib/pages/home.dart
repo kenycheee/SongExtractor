@@ -81,9 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-//
-// --- PAGE: Scores ---
-//
 class ScoresPage extends StatefulWidget {
   const ScoresPage({super.key});
 
@@ -101,7 +98,6 @@ class _ScoresPageState extends State<ScoresPage> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 600;
 
-    // 🔍 Filter gabungan (pencarian + kategori)
     bool filterItem(ScoreItem item) {
       final matchSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.subtitle.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -259,9 +255,6 @@ class _ScoresPageState extends State<ScoresPage> {
   }
 }
 
-//
-// --- COMPONENTS ---
-//
 class SectionHeader extends StatelessWidget {
   final String title;
   const SectionHeader({required this.title, super.key});
@@ -421,9 +414,6 @@ class _RecommendTile extends StatelessWidget {
   }
 }
 
-//
-// --- DUMMY DATA ---
-//
 class ScoreItem {
   final String image;
   final String title;

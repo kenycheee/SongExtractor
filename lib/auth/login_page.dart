@@ -49,7 +49,6 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 🔹 Tombol Back bulat di pojok kiri atas
                 Align(
                   alignment: Alignment.topLeft,
                   child: GestureDetector(
@@ -79,7 +78,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 40),
 
-                // 🔹 Ikon / Logo
                 Container(
                   decoration: BoxDecoration(
                     color: primaryColor.withOpacity(0.1),
@@ -91,7 +89,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // 🔹 Judul
                 const Text(
                   "Welcome Back 👋",
                   textAlign: TextAlign.center,
@@ -109,7 +106,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 40),
 
-                // 🔹 Email
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -129,7 +125,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 18),
 
-                // 🔹 Password
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
@@ -150,7 +145,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // 🔹 Tombol Login
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -182,7 +176,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 22),
 
-                // 🔹 Link ke Register
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

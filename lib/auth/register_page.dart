@@ -69,7 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Back Button bulat
               Container(
                 margin: const EdgeInsets.only(bottom: 32),
                 child: GestureDetector(
@@ -98,7 +97,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
 
-              // 🔹 Judul
               const Text(
                 "Create Account ✨",
                 style: TextStyle(
@@ -114,7 +112,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 40),
 
-              // 🔹 Name
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -134,7 +131,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 18),
 
-              // 🔹 Email
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -154,7 +150,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 18),
 
-              // 🔹 Password
               TextField(
                 controller: _passwordController,
                 obscureText: true,
@@ -175,7 +170,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 28),
 
-              // 🔹 Tombol Register
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -209,7 +203,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 20),
 
-              // 🔹 Link ke Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -70,7 +70,6 @@ class _PostPageState extends State<PostPage> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 600;
 
-    // 🔐 Jika belum login
     if (user == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF9F8FB),
@@ -79,7 +78,6 @@ class _PostPageState extends State<PostPage> {
       );
     }
 
-    // 🟪 Jika sudah login
     return Scaffold(
       backgroundColor: const Color(0xFFF9F8FB),
       appBar: _buildAppBar(context),
@@ -95,7 +93,6 @@ class _PostPageState extends State<PostPage> {
                     maxLines: 4),
                 const SizedBox(height: 20),
 
-                // 🖼️ Upload area
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(
@@ -144,7 +141,6 @@ class _PostPageState extends State<PostPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // 🔘 Upload button
                 Center(
                   child: _isUploading
                       ? const CircularProgressIndicator(color: Color(0xFF6B4EFF))
@@ -173,7 +169,6 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // 🟣 Input Field
   Widget _buildInputField(String hint, TextEditingController controller,
       {int maxLines = 1}) {
     return Container(
@@ -199,7 +194,6 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // 🟪 AppBar dengan tombol back arrow
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -228,7 +222,6 @@ class _PostPageState extends State<PostPage> {
     );
   }
 
-  // 🔒 Tampilan jika belum login
   Widget _buildLoginPrompt() {
     return Center(
       child: Padding(

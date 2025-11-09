@@ -56,7 +56,6 @@ class _LibraryPageState extends State<LibraryPage> {
                   children: [
                     const SizedBox(height: 12),
 
-                    // 🔍 Search bar
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -90,7 +89,6 @@ class _LibraryPageState extends State<LibraryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ❤️ FAVORITES
                             const _SectionHeader(title: 'Recent Favorites'),
                             const SizedBox(height: 8),
                             SizedBox(
@@ -99,7 +97,6 @@ class _LibraryPageState extends State<LibraryPage> {
                             ),
                             const SizedBox(height: 28),
 
-                            // 🎵 CREATED BY ME
                             const _SectionHeader(title: 'Created by Me'),
                             const SizedBox(height: 8),
                             SizedBox(
@@ -118,7 +115,6 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 }
 
-// 🔹 FAVORITES SECTION
 class _FavoritesList extends StatelessWidget {
   final String searchQuery;
   const _FavoritesList({required this.searchQuery});
@@ -188,7 +184,6 @@ class _FavoritesList extends StatelessWidget {
   }
 }
 
-// 🔹 MY CREATIONS SECTION
 class _MyCreationsList extends StatelessWidget {
   final String searchQuery;
   const _MyCreationsList({required this.searchQuery});
@@ -255,7 +250,6 @@ class _MyCreationsList extends StatelessWidget {
   }
 }
 
-// 🔹 SECTION HEADER
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -272,7 +266,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// 🔹 CARD ITEM
 class _LibraryCard extends StatelessWidget {
   final String imageUrl;
   final String title;
